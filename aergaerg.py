@@ -3,11 +3,12 @@ import pygame
 from pygame.locals import *
 
 w = 40
-h = 10
+h = 30
 blocksize = 10
 gmap = [[0 for x in range(w)] for y in range(h)]
 blue = Color(0, 0, 255)
 black = Color(0, 0, 0)
+red = Color(255, 0, 0)
 
 class pc(pygame.sprite.Sprite):
 	xpos = 0
@@ -15,7 +16,7 @@ class pc(pygame.sprite.Sprite):
 	isalive = True
 	def __init__(self):
 		pygame.sprite.Sprite.__init__(self)
-		gmap[self.xpos][self.ypos] = 1
+		gmap[self.ypos][self.xpos] = 1
 		self.isalive = True
 		self.rect = pygame.Rect(self.xpos, self.ypos, blocksize, blocksize)
 
@@ -46,7 +47,7 @@ class pc(pygame.sprite.Sprite):
 			self.rect = self.rect.move(blocksize, 0)
 
 	def move(self, d):
-		gmap[self.xpos][self.ypos] = 0
+		gmap[self.ypos][self.xpos] = 0
 
 		if d == 8:
 			self.north()
@@ -57,51 +58,98 @@ class pc(pygame.sprite.Sprite):
 		elif d == 6:
 			self.east()
 
-		gmap[self.xpos][self.ypos] = 1
+		gmap[self.ypos][self.xpos] = 1
 
-		if gmap[self.xpos][self.ypos] == 8:
+		if gmap[self.ypos][self.xpos] == 8:
 		 	self.isalive = False
+
+
+class segment(pygame.sprite.Sprite):
+	xpos = None
+	ypos = None
+	next = None
+	prev = None
+	def __init__(self, x, y):
+		pygame.sprite.Sprite.__init__(self)
+		self.xpos = x
+		self.ypos = y
+		gmap[self.ypos][self.xpos] = 8
+		self.rect = pygame.Rect(self.xpos*blocksize-1, self.ypos*blocksize-1, blocksize-2, blocksize-2)
+
+	def getPos(self):
+		return [self.xpos, self.ypos]
+
+	def setNext(self, seg):
+		self.next = seg
+
+	def setPrev(self, seg):
+		self.prev = seg
+
+	def getNext(self):
+		return self.next
+
+	def getPrev(self):
+		return self.prev
+
+	def move(self):
+		'''
+		NOTE: DO NOT CALL ON HEAD
+		'''
+		temp = self.getPos()
+		if self.getNext() is None:
+			gmap[temp[1]][temp[0]] = 0
+		next = self.getPrev()
+		nextc = next.getPos()
+		self.xpos = nextc[0]
+		self.ypos = nextc[1]
+		self.rect = next.rect
 
 
 class snake(pygame.sprite.Sprite):
 	'''
-	2 = snake
+	8 = snake
 	'''
-	hposx = w-1
-	hposy = h-1
+	hx = w-3
+	hy = h-1
 
 	length = 1
 	def __init__(self):
 		pygame.sprite.Sprite.__init__(self)
-		gmap[self.hposx][self.hposy] = 2
-		self.rect = pygame.Rect(self.hposx*blocksize-1, self.hposy*blocksize-1, blocksize-2, blocksize-2)
+		self.head = segment(hx, hy)
+		one = segment(hx + 1, hy)
+		two = segment(hx + 2, hy)
+
+		self.head.setNext(one)
+		one.setNext(two)
+		one.setPrev(self.head)
+		two.setPrev(one)
 
 	def grow(self):
 		self.length+=1
 
 	def north(self):
-		if self.hposy > 0:
-			self.hposy-=1
+		if self.hy > 0:
+			self.hy-=1
 			self.rect = self.rect.move(0, -blocksize)
 
 	def south(self):
-		if self.hposy < h - 1:
-			self.hposy+=1
+		if self.hy < h - 1:
+			self.hy+=1
 			self.rect = self.rect.move(0, blocksize)
 
 	def west(self):
-		if self.hposx > 0:
-			self.hposx-=1
+		if self.hx > 0:
+			self.hx-=1
 			self.rect = self.rect.move(-blocksize, 0)
 
 	def east(self):
-		if self.hposx < w - 1:
-			self.hposx+=1
+		if self.hx < w - 1:
+			self.hx+=1
 			self.rect = self.rect.move(blocksize, 0)
 
 	def chase(self, x, y):
-		xdif = abs(x - self.hposx)
-		ydif = abs(y - self.hposy)
+		xdif = abs(x - self.hx)
+		ydif = abs(y - self.hy)
 
 		# have snake move straight depending on max(x/y dif) and difference on x/y dif
 
@@ -134,10 +182,12 @@ def main():
 				elif keystate[K_RIGHT]:
 					player.move(6)
 				elif keystate[K_m]:
+					print("#####################################################")
 					for i in gmap:
-						print(i, "/n")
-				elif keystate[K_g]:
-					print("mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm")
+						for m in i:
+							print(m, " ", end="")
+						print()
+					
 		keystate = pygame.key.get_pressed()
 
 		pygame.display.update()

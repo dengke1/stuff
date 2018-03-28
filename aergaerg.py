@@ -24,27 +24,35 @@ class pc(pygame.sprite.Sprite):
 		# self.area = screen.get_rect()
 
 	def getPos(self):
-		return (xpos, ypos)
+		return (self.xpos, self.ypos)
 
 	def north(self):
 		if self.ypos > 0:
 			self.ypos-=1
 			self.rect = self.rect.move(0, -blocksize)
+			self.checkCollision(self.xpos, self.ypos)
 
 	def south(self):
 		if self.ypos < h - 1:
 			self.ypos+=1
 			self.rect = self.rect.move(0, blocksize)
+			self.checkCollision(self.xpos, self.ypos)
 
 	def west(self):
 		if self.xpos > 0:
 			self.xpos-=1
 			self.rect = self.rect.move(-blocksize, 0)
+			self.checkCollision(self.xpos, self.ypos)
 
 	def east(self):
 		if self.xpos < w - 1:
 			self.xpos+=1
 			self.rect = self.rect.move(blocksize, 0)
+			self.checkCollision(self.xpos, self.ypos)
+
+	def checkCollision(self, x, y):
+		if gmap[y][x] == 8:
+		 	self.isalive = False
 
 	def move(self, d):
 		gmap[self.ypos][self.xpos] = 0
@@ -60,8 +68,6 @@ class pc(pygame.sprite.Sprite):
 
 		gmap[self.ypos][self.xpos] = 1
 
-		if gmap[self.ypos][self.xpos] == 8:
-		 	self.isalive = False
 
 
 class segment(pygame.sprite.Sprite):
@@ -74,7 +80,7 @@ class segment(pygame.sprite.Sprite):
 		self.xpos = x
 		self.ypos = y
 		gmap[self.ypos][self.xpos] = 8
-		self.rect = pygame.Rect(self.xpos*blocksize-1, self.ypos*blocksize-1, blocksize-2, blocksize-2)
+		self.rect = pygame.Rect(self.xpos*blocksize+1, self.ypos*blocksize+1, blocksize-2, blocksize-2)
 
 	def getPos(self):
 		return [self.xpos, self.ypos]
@@ -111,82 +117,131 @@ class snake(pygame.sprite.Sprite):
 	'''
 	hx = w-3
 	hy = h-1
+	direction = 'w'
 
-	length = 1
 	def __init__(self):
 		pygame.sprite.Sprite.__init__(self)
-		self.head = segment(hx, hy)
-		one = segment(hx + 1, hy)
-		two = segment(hx + 2, hy)
+		self.head = segment(self.hx, self.hy)
+		one = segment(self.hx + 1, self.hy)
+		two = segment(self.hx + 2, self.hy)
 
 		self.head.setNext(one)
 		one.setNext(two)
 		one.setPrev(self.head)
 		two.setPrev(one)
+		self.tail = two
 
-	def grow(self):
-		self.length+=1
+
+	def onwards(self):
+		if self.direction == 'n':
+			self.head.ypos-=1
+			self.head.rect = self.head.rect.move(0, -blocksize)
+		elif self.direction == 's':
+			self.head.ypos+=1
+			self.head.rect = self.head.rect.move(0, blocksize)
+		elif self.direction == 'w':
+			self.head.xpos-=1
+			self.head.rect = self.head.rect.move(-blocksize, 0)
+		elif self.direction == 'e':
+			self.head.xpos+=1
+			self.head.rect = self.head.rect.move(blocksize, 0)
 
 	def north(self):
-		if self.hy > 0:
-			self.hy-=1
-			self.rect = self.rect.move(0, -blocksize)
+		self.direction = 'n'
 
 	def south(self):
-		if self.hy < h - 1:
-			self.hy+=1
-			self.rect = self.rect.move(0, blocksize)
+		self.direction = 's'
 
 	def west(self):
-		if self.hx > 0:
-			self.hx-=1
-			self.rect = self.rect.move(-blocksize, 0)
+		self.direction = 'w'
 
 	def east(self):
-		if self.hx < w - 1:
-			self.hx+=1
-			self.rect = self.rect.move(blocksize, 0)
+		self.direction = 'e'
 
 	def chase(self, x, y):
-		xdif = abs(x - self.hx)
-		ydif = abs(y - self.hy)
+		xdif = abs(x - self.head.xpos)
+		ydif = abs(y - self.head.ypos)
 
-		# have snake move straight depending on max(x/y dif) and difference on x/y dif
+		self.onwards();
+		if xdif <= 1:
+			if y > self.head.ypos:
+				self.south()
+			else:
+				self.north()
 
+		if ydif <= 1:
+			if x > self.head.xpos:
+				self.east()
+			else:
+				self.west()
 
 
 def main():
 	pygame.init()
 	screen = pygame.display.set_mode((w*blocksize, h*blocksize), 0, 32)
 	player = pc()
+	enemy = snake()
 
 	pygame.draw.rect(screen, blue, player.rect)
-	pygame.key.set_repeat(20, 20)
+	
+	i = enemy.head
+	while i is not None:
+		pygame.draw.rect(screen, red, i.rect)
+		i = i.getNext()
+
+	pygame.key.set_repeat(1, 1)
 	keystate = pygame.key.get_pressed()
 
+	clock = pygame.time.Clock()
+	pcWalkCD = 0
+	pcDelay = 0.03
+
+	sWalkCD = 0
+	sDelay = 0.05
 	# main loop
 	while player.isalive:
+		delta = clock.tick() / 1000.0
+		pcWalkCD -= delta
+		sWalkCD -= delta
+
 		pygame.draw.rect(screen, blue, player.rect)
+
+		pos = player.getPos()
+
+		i = enemy.head
+		while i is not None:
+			pygame.draw.rect(screen, red, i.rect)
+			i = i.getNext()
+
+		if sWalkCD <= 0:
+			enemy.chase(pos[0], pos[1])
+			sWalkCD = sDelay
+
 		for event in pygame.event.get():
 			if event.type==QUIT or (event.type==KEYDOWN and keystate[K_q]):
 				pygame.quit()
 				sys.exit()
-			if event.type==KEYDOWN:
-				pygame.draw.rect(screen, black, player.rect)
-				if keystate[K_UP]:
-					player.move(8)
-				elif keystate[K_DOWN]:
-					player.move(5)
-				elif keystate[K_LEFT]:
-					player.move(4)
-				elif keystate[K_RIGHT]:
-					player.move(6)
-				elif keystate[K_m]:
-					print("#####################################################")
-					for i in gmap:
-						for m in i:
-							print(m, " ", end="")
-						print()
+			if pcWalkCD <= 0:
+				if event.type==KEYDOWN:
+					pygame.draw.rect(screen, black, player.rect)
+					if keystate[K_UP]:
+						player.move(8)
+						pcWalkCD = pcDelay
+					elif keystate[K_DOWN]:
+						player.move(5)
+						pcWalkCD = pcDelay
+					elif keystate[K_LEFT]:
+						player.move(4)
+						pcWalkCD = pcDelay
+					elif keystate[K_RIGHT]:
+						player.move(6)
+						pcWalkCD = pcDelay
+					elif keystate[K_m]:
+						print("#####################################################")
+						for i in gmap:
+							for m in i:
+								print(m, " ", end="")
+							print()
 					
 		keystate = pygame.key.get_pressed()
 
@@ -196,4 +251,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+	main()

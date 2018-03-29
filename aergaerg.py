@@ -11,6 +11,9 @@ black = Color(0, 0, 0)
 red = Color(255, 0, 0)
 
 class pc(pygame.sprite.Sprite):
+	'''
+	square representing player
+	'''
 	xpos = 0
 	ypos = 0
 	isalive = True
@@ -99,6 +102,7 @@ class segment(pygame.sprite.Sprite):
 
 	def move(self):
 		'''
+		Moves segment to location where previous segment was
 		NOTE: DO NOT CALL ON HEAD
 		'''
 		temp = self.getPos()
@@ -109,6 +113,7 @@ class segment(pygame.sprite.Sprite):
 		self.xpos = nextc[0]
 		self.ypos = nextc[1]
 		self.rect = next.rect
+		gmap[ypos][xpos] = 8
 
 
 class snake(pygame.sprite.Sprite):
@@ -145,6 +150,10 @@ class snake(pygame.sprite.Sprite):
 		elif self.direction == 'e':
 			self.head.xpos+=1
 			self.head.rect = self.head.rect.move(blocksize, 0)
+		if gmap[self.head.ypos][self.head.xpos] == 1:
+			return True
+		else:
+			return False
 
 	def north(self):
 		self.direction = 'n'
@@ -162,7 +171,7 @@ class snake(pygame.sprite.Sprite):
 		xdif = abs(x - self.head.xpos)
 		ydif = abs(y - self.head.ypos)
 
-		self.onwards();
+		ret = self.onwards();
 		if xdif <= 1:
 			if y > self.head.ypos:
 				self.south()
@@ -174,7 +183,7 @@ class snake(pygame.sprite.Sprite):
 				self.east()
 			else:
 				self.west()
-
+		return ret
 
 def main():
 	pygame.init()
@@ -197,9 +206,10 @@ def main():
 	pcDelay = 0.03
 
 	sWalkCD = 0
-	sDelay = 0.05
+	sDelay = 0.03
 	# main loop
 	while player.isalive:
+
 		delta = clock.tick() / 1000.0
 		pcWalkCD -= delta
 		sWalkCD -= delta
@@ -212,10 +222,6 @@ def main():
 		while i is not None:
 			pygame.draw.rect(screen, red, i.rect)
 			i = i.getNext()
-
-		if sWalkCD <= 0:
-			enemy.chase(pos[0], pos[1])
-			sWalkCD = sDelay
 
 		for event in pygame.event.get():
 			if event.type==QUIT or (event.type==KEYDOWN and keystate[K_q]):
@@ -244,6 +250,12 @@ def main():
 							print()
 					
 		keystate = pygame.key.get_pressed()
+
+
+		if sWalkCD <= 0:
+			if enemy.chase(pos[0], pos[1]):
+				player.isalive = False
+			sWalkCD = sDelay
 
 		pygame.display.update()
 

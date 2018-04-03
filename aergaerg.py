@@ -2,15 +2,16 @@ import os, sys, random
 import pygame
 from pygame.locals import *
 
-w = 40
-h = 30
+w = 50
+h = 40
 blocksize = 10
 gmap = [[0 for x in range(w)] for y in range(h)]
 blue = Color(0, 0, 255)
 black = Color(0, 0, 0)
 red = Color(255, 0, 0)
-sMaxSpeed = 0.035
+sMaxSpeed = 0.0315
 sMinSpeed = 0.06
+playerSpeed = 0.03
 
 
 class pc(pygame.sprite.Sprite):
@@ -119,7 +120,7 @@ class segment(pygame.sprite.Sprite):
 
 class snake(pygame.sprite.Sprite):
 	'''
-	8 = snake
+	a snake object consisting of a number of segments
 	'''
 	hx = w-4
 	hy = h-1
@@ -162,24 +163,16 @@ class snake(pygame.sprite.Sprite):
 			gmap[self.head.ypos][self.head.xpos] = 8
 			return False
 
-	def north(self):
-		self.direction = 'n'
-
-	def south(self):
-		self.direction = 's'
-
-	def west(self):
-		self.direction = 'w'
-
-	def east(self):
-		self.direction = 'e'
-
 	def chase(self, x, y, grow):
+		'''
+		changes direction of snake and chases pc, also grows occasionally
+		'''
 		xdif = abs(x - self.head.xpos)
 		ydif = abs(y - self.head.ypos)
 
 		# move head and rest of body from tail up
 		temp = self.tail
+		gpos = temp.getPos()
 		gmap[temp.ypos][temp.xpos] = 0
 		while temp != self.head:
 			prev = temp.getPrev()
@@ -190,6 +183,11 @@ class snake(pygame.sprite.Sprite):
 
 			temp.rect = prev.rect
 			temp = prev
+		if grow:
+			newTail = segment(gpos[0], gpos[1])
+			self.tail.setNext(newTail)
+			newTail.setPrev(self.tail)
+			self.tail = newTail
 
 		ret = self.onwards()
 
@@ -197,15 +195,15 @@ class snake(pygame.sprite.Sprite):
 		# Change directions based on location
 		if xdif <= 1:
 			if y > self.head.ypos:
-				self.south()
+				self.direction = 's'
 			else:
-				self.north()
+				self.direction = 'n'
 
 		if ydif <= 1:
 			if x > self.head.xpos:
-				self.east()
+				self.direction = 'e'
 			else:
-				self.west()
+				self.direction = 'w'
 		return ret
 
 def drawSnake(seg, dis, color):
@@ -213,8 +211,30 @@ def drawSnake(seg, dis, color):
 		pygame.draw.rect(dis, color, seg.rect)
 		seg = seg.getNext()
 
+def drawSnake2(seg, dis):
+	r = 255
+	g = 0
+	b = 0
+	while seg is not None:
+		if r >= 250 and b <= 245:
+			b+=5
+		elif b >= 250 and r >= 5:
+			b = 255
+			r-=5
+		elif r <= 5 and g <= 245:
+			r = 0
+			g +=10
+		elif g >= 245 and b >= 5:
+			g = 255
+			b -= 5
+		elif b <= 5 and r <= 250:
+			b = 0
+			r += 5
+		pygame.draw.rect(dis, Color(r, g, b), seg.rect)
+		seg = seg.getNext()
 
-def main():
+
+def game():
 	count = 10
 	doGrow = False
 
@@ -231,8 +251,9 @@ def main():
 	keystate = pygame.key.get_pressed()
 
 	clock = pygame.time.Clock()
+
 	pcWalkCD = 0
-	pcDelay = 0.03
+	pcDelay = playerSpeed
 
 	sWalkCD = 0
 	sDelay = sMinSpeed
@@ -247,8 +268,7 @@ def main():
 
 		pos = player.getPos()
 
-		i = enemy.head
-		drawSnake(enemy.head, screen, red)
+		drawSnake2(enemy.head, screen)
 
 		for event in pygame.event.get():
 			if event.type==QUIT or (event.type==KEYDOWN and keystate[K_q]):
@@ -279,13 +299,13 @@ def main():
 					
 		keystate = pygame.key.get_pressed()
 
-
+		# move snake, update counter to increase speed and length
 		if sWalkCD <= 0:
 			drawSnake(enemy.head, screen, black)
 			count -= 1
 			if enemy.chase(pos[0], pos[1], doGrow):
 				player.isalive = False
-				doGrow = False
+			doGrow = False
 			if count == 0: 
 				count = 10
 				doGrow = True
@@ -293,9 +313,14 @@ def main():
 					sDelay -= 0.0005
 			sWalkCD = sDelay
 		pygame.display.update()
+	return 1
 
-
+def end():
+	screen = pygame.display.set_mode((w*blocksize, h*blocksize), 0, 32)
 
 
 if __name__ == '__main__':
-	main()
+	while 1:
+		gmap = [[0 for x in range(w)] for y in range(h)]
+		game()
+

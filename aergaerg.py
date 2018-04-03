@@ -1,9 +1,9 @@
-import os, sys, random
+import sys, random
 import pygame
 from pygame.locals import *
 
 w = 50
-h = 40
+h = 37
 blocksize = 10
 gmap = [[0 for x in range(w)] for y in range(h)]
 blue = Color(0, 0, 255)
@@ -239,7 +239,7 @@ def game():
 	doGrow = False
 
 	pygame.init()
-	screen = pygame.display.set_mode((w*blocksize, h*blocksize), 0, 32)
+	screen = pygame.display.set_mode((w*blocksize, h*blocksize))
 	player = pc()
 	enemy = snake()
 
@@ -248,7 +248,7 @@ def game():
 	drawSnake(enemy.head, screen, red)
 
 	pygame.key.set_repeat(1, 1)
-	keystate = pygame.key.get_pressed()
+	keystate = pygame.key.get_focused()
 
 	clock = pygame.time.Clock()
 
@@ -294,7 +294,7 @@ def game():
 						print("#####################################################")
 						for i in gmap:
 							for m in i:
-								print(m, " ", end="")
+								print(m, end="")
 							print()
 					
 		keystate = pygame.key.get_pressed()
@@ -316,7 +316,7 @@ def game():
 	return 1
 
 def end():
-	screen = pygame.display.set_mode((w*blocksize, h*blocksize), 0, 32)
+	screen = pygame.display.set_mode((w*blocksize, h*blocksize), pygame.OPENGL)
 
 
 if __name__ == '__main__':

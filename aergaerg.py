@@ -3,7 +3,7 @@ import pygame
 from pygame.locals import *
 
 w = 30
-h = 20
+h = 22
 blocksize = 10
 gmap = [[0 for x in range(w)] for y in range(h)]
 blue = Color(0, 0, 255)
@@ -253,16 +253,22 @@ def drawSnake2(seg, dis, color):
 		seg = seg.getNext()
 
 
-def game():
+def game(screen):
 	score = 0
 	count = 10
 	doGrow = False
 
-	pygame.init()
-	screen = pygame.display.set_mode((w*blocksize + (2*blocksize), h*blocksize + topBuffer + blocksize))
+	# pygame.init()
+	# screen = pygame.display.set_mode((w*blocksize + (2*blocksize), h*blocksize + topBuffer + blocksize))
 	player = pc()
 	enemy = snake()
 
+	# reset the screen
+	background = pygame.Surface(screen.get_size())
+	background = background.convert()
+	background.fill(black)
+	screen.blit(background, (0, 0))
+	pygame.display.flip()
 
 	if pygame.font:
 		font = pygame.font.Font(None, 20)
@@ -317,14 +323,15 @@ def game():
 				elif keystate[K_RIGHT]:
 					player.move(6)
 					pcWalkCD = pcDelay
-				elif keystate[K_m]:
-					print("#####################################################")
-					for i in gmap:
-						for m in i:
-							print(m, end="")
-						print()
+				# elif keystate[K_m]:
+				# 	print("#####################################################")
+				# 	for i in gmap:
+				# 		for m in i:
+				# 			print(m, end="")
+				# 		print()
 				
 		keystate = pygame.key.get_pressed()
+
 		# move snake, update counter to increase speed and length
 		if sWalkCD <= 0:
 			drawSnake(enemy.head, screen, black)
@@ -333,7 +340,7 @@ def game():
 			#score updating
 			tscore = str(score)
 			placement = len(tscore)-2
-			score+=5
+			score+=3
 			text = font.render(tscore, 1, (200, 200, 200))
 			screen.blit(text, ((w - placement)*blocksize, blocksize*1.5))
 
@@ -346,12 +353,32 @@ def game():
 					sDelay-=0.0005
 			sWalkCD = sDelay
 		pygame.display.update()
+	
 	return score
 
+def endScreen(score, screen):
+
+	background = pygame.Surface(screen.get_size())
+	background = background.convert()
+	background.fill(black)
+	
+
+
+	if pygame.font:
+		font = pygame.font.Font(None, 40)
+		scoreText = font.render(str(score), 1, (200, 200, 200))
+		background.blit(scoreText, (w/2*blocksize, blocksize*1.5))
+	screen.blit(background, (0, 0))
+	pygame.display.flip()
+
+
+	pygame.time.wait(1000)
 
 
 if __name__ == '__main__':
+	pygame.init()
+	screen = pygame.display.set_mode((w*blocksize + (2*blocksize), h*blocksize + topBuffer + blocksize))
 	while 1:
 		gmap = [[0 for x in range(w)] for y in range(h)]
-		game()
-
+		score = game(screen)
+		endScreen(score, screen)
